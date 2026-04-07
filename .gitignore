@@ -1,0 +1,31 @@
+## Arquivos e pastas do .NET
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.sln.docstates
+
+## Pacotes e dependências
+/packages/
+/testrunner/
+/nupkg/
+
+## Compilação e publicação
+*.csproj.user
+*.pubxml
+*.publishsettings
+*appsettings.Development.json
+*appsettings.Local.json
+
+## Outros
+node_modules/
+dist/
+.env
+.cache
+/bin
+/infra

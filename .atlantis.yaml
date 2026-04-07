@@ -1,0 +1,37 @@
+version: 3
+
+automerge: false
+
+projects:
+  - name: backend-dev
+    dir: infra/terraform/environments/dev
+    workspace: default
+    autoplan:
+      when_modified: ["**/*.tf", "**/*.hcl", "../../modules/**"]
+      enabled: true
+    workflow: terragrunt-dev
+
+  - name: backend-prod
+    dir: infra/terraform/environments/prod
+    workspace: default
+    autoplan:
+      when_modified: ["**/*.tf", "**/*.hcl", "../../modules/**"]
+      enabled: true
+    workflow: terragrunt-prod
+
+workflows:
+  terragrunt-dev:
+    plan:
+      steps:
+        - run: terragrunt plan -no-color
+    apply:
+      steps:
+        - run: terragrunt apply -auto-approve -no-color
+
+  terragrunt-prod:
+    plan:
+      steps:
+        - run: terragrunt plan -no-color
+    apply:
+      steps:
+        - run: terragrunt apply -auto-approve -no-color
