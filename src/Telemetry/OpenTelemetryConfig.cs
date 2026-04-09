@@ -1,6 +1,5 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
-using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -8,45 +7,42 @@ using OpenTelemetry.Trace;
 
 namespace ApiUser.Telemetry;
 
-public static class OpenTelemetryConfig {
+public static class OpenTelemetryConfig
+{
+    public const string ActivitySourceName = "ApiUser";
+    public const string MeterName = "ApiUser.Metrics";
 
-    public const string ActivitySourceName = "api.roll-dice";
-    public const string MeterName = "api.roll-dice.Metrics";
     public static void AppOpenTelemetryConfig(this WebApplicationBuilder builder, string serviceName, string serviceVersion)
     {
         var assemblyVersion = serviceVersion ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
-
-        // Config por ambiente (com defaults sensatos)
-        var otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT") ?? "http://localhost:4317";
-
         var resourceBuilder = ResourceBuilder.CreateDefault()
             .AddService(serviceName: serviceName, serviceVersion: assemblyVersion, serviceInstanceId: Environment.MachineName)
             .AddTelemetrySdk()
-            .AddAttributes(new Dictionary<string, object?>
+            .AddAttributes(new Dictionary<string, object>
             {
                 ["deployment.environment"] = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"
             });
 
-        builder.Logging.AddOpenTelemetry(o =>
+        if (IsAutoInstrumentationEnabled())
         {
-            o.SetResourceBuilder(resourceBuilder);
-            o.IncludeFormattedMessage = true;
-            o.IncludeScopes = true;
-            o.ParseStateValues = true;
-            o.AddOtlpExporter();
+            return;
+        }
+
+        builder.Logging.AddOpenTelemetry(options =>
+        {
+            options.SetResourceBuilder(resourceBuilder);
+            options.IncludeFormattedMessage = true;
+            options.IncludeScopes = true;
+            options.ParseStateValues = true;
+            options.AddOtlpExporter();
         });
 
-        builder.Services.AddOpenTelemetry()
-            .WithTracing(tracerProviderBuilder =>
+        builder.Services
+            .AddOpenTelemetry()
+            .WithTracing(tracing =>
             {
-                tracerProviderBuilder
-                    .SetResourceBuilder(ResourceBuilder.CreateDefault()
-                        .AddService("ApiUser", "1.0.0")
-                        .AddAttributes(new Dictionary<string, object>
-                        {
-                            ["service.instance.id"] = Environment.MachineName,
-                            ["service.version"] = "1.0.0"
-                        }))
+                tracing
+                    .SetResourceBuilder(resourceBuilder)
                     .AddSource("ApiUser.UsersController")
                     .AddSource("ApiUser.UserService")
                     .AddSource("ApiUser.EntityFramework")
@@ -65,15 +61,40 @@ public static class OpenTelemetryConfig {
                     })
                     .AddHttpClientInstrumentation()
                     .AddConsoleExporter()
-                    .AddOtlpExporter(); // Para exportar para sistemas como Grafana, Prometheus, etc.
+                    .AddOtlpExporter();
             })
             .WithMetrics(metrics =>
             {
                 metrics
-                    .AddMeter(MeterName)                      // métricas manuais
+                    .SetResourceBuilder(resourceBuilder)
+                    .AddMeter(MeterName)
                     .AddAspNetCoreInstrumentation()
                     .AddRuntimeInstrumentation()
                     .AddOtlpExporter();
             });
+    }
+
+    private static bool IsAutoInstrumentationEnabled()
+    {
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OTEL_DOTNET_AUTO_HOME")))
+        {
+            return true;
+        }
+
+        var startupHooks = Environment.GetEnvironmentVariable("DOTNET_STARTUP_HOOKS");
+        if (!string.IsNullOrWhiteSpace(startupHooks) &&
+            startupHooks.Contains("OpenTelemetry.AutoInstrumentation", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var profilerEnabled = Environment.GetEnvironmentVariable("CORECLR_ENABLE_PROFILING");
+        var profilerId = Environment.GetEnvironmentVariable("CORECLR_PROFILER");
+
+        return profilerEnabled == "1" &&
+               string.Equals(
+                   profilerId,
+                   "{918728DD-259F-4A6A-AC2B-B85E1B658318}",
+                   StringComparison.OrdinalIgnoreCase);
     }
 }

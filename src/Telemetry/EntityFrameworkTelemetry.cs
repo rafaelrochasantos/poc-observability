@@ -9,7 +9,7 @@ namespace ApiUser.Telemetry
     public static class EntityFrameworkTelemetry
     {
         public static readonly ActivitySource ActivitySource = new("ApiUser.EntityFramework");
-        
+
         public const string DatabaseOperationActivityName = "ef.database_operation";
         public const string QueryExecutionActivityName = "ef.query_execution";
     }
@@ -24,15 +24,15 @@ namespace ApiUser.Telemetry
         {
             using var activity = EntityFrameworkTelemetry.ActivitySource.StartActivity(
                 EntityFrameworkTelemetry.QueryExecutionActivityName);
-            
+
             activity?.SetTag("db.system", "sqlserver");
             activity?.SetTag("db.operation", GetOperationType(command.CommandText));
             activity?.SetTag("db.statement", command.CommandText);
             activity?.SetTag("db.execution_time_ms", eventData.Duration.TotalMilliseconds);
-            
-            if (eventData.Context?.Database.GetConnectionString() != null)
+
+            var connectionString = eventData.Context?.Database.GetConnectionString();
+            if (!string.IsNullOrWhiteSpace(connectionString))
             {
-                var connectionString = eventData.Context.Database.GetConnectionString();
                 var serverName = ExtractServerName(connectionString);
                 activity?.SetTag("db.connection_string.server", serverName);
             }
@@ -48,7 +48,7 @@ namespace ApiUser.Telemetry
         {
             using var activity = EntityFrameworkTelemetry.ActivitySource.StartActivity(
                 EntityFrameworkTelemetry.DatabaseOperationActivityName);
-            
+
             activity?.SetTag("db.system", "sqlserver");
             activity?.SetTag("db.operation", GetOperationType(command.CommandText));
             activity?.SetTag("db.statement", command.CommandText);
@@ -61,7 +61,7 @@ namespace ApiUser.Telemetry
         private static string GetOperationType(string commandText)
         {
             var text = commandText.TrimStart().ToUpperInvariant();
-            
+
             if (text.StartsWith("SELECT")) return "SELECT";
             if (text.StartsWith("INSERT")) return "INSERT";
             if (text.StartsWith("UPDATE")) return "UPDATE";
@@ -69,7 +69,7 @@ namespace ApiUser.Telemetry
             if (text.StartsWith("CREATE")) return "CREATE";
             if (text.StartsWith("ALTER")) return "ALTER";
             if (text.StartsWith("DROP")) return "DROP";
-            
+
             return "UNKNOWN";
         }
 
@@ -78,10 +78,10 @@ namespace ApiUser.Telemetry
             try
             {
                 var parts = connectionString.Split(';');
-                var serverPart = parts.FirstOrDefault(p => 
+                var serverPart = parts.FirstOrDefault(p =>
                     p.TrimStart().StartsWith("Server=", StringComparison.OrdinalIgnoreCase) ||
                     p.TrimStart().StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase));
-                
+
                 if (serverPart != null)
                 {
                     var value = serverPart.Split('=')[1].Trim();
@@ -92,7 +92,7 @@ namespace ApiUser.Telemetry
             {
                 // Ignore parsing errors
             }
-            
+
             return "unknown";
         }
     }
