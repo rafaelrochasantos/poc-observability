@@ -6,8 +6,8 @@ POC em .NET 8 para observabilidade com OpenTelemetry.
 
 A aplicacao suporta dois modos de execucao:
 
-- modo manual: a instrumentacao e registrada no codigo em [OpenTelemetryConfig.cs](/d:/Rafael/Documents/granto/api-user/src/Telemetry/OpenTelemetryConfig.cs)
-- modo auto-instrumentado: a instrumentacao automatica e ativada no bootstrap do processo por [run-otel-auto.ps1](/d:/Rafael/Documents/granto/api-user/scripts/run-otel-auto.ps1)
+- modo manual: a instrumentacao e registrada no codigo em [OpenTelemetryConfig.cs](src/Telemetry/OpenTelemetryConfig.cs)
+- modo auto-instrumentado: a instrumentacao automatica e ativada no bootstrap do processo por [run-otel-auto.ps1](scripts/run-otel-auto.ps1)
 
 No modo auto-instrumentado, a aplicacao detecta a presenca do profiler/startup hook e nao registra a pipeline manual para evitar spans, metricas e logs duplicados.
 
@@ -36,7 +36,7 @@ Server=localhost,1433;Database=UserDb;User Id=sa;Password=Your_password123;Trust
 
 Arquivo relacionado:
 
-- [docker-compose.yml](/d:/Rafael/Documents/granto/api-user/docker-compose.yml)
+- [docker-compose.yml](docker-compose.yml)
 
 ## Rodando em modo manual
 
@@ -97,7 +97,7 @@ Na pratica, isso significa:
 - `dotnet run`: executa a API com a configuracao manual registrada em codigo
 - `instrument.cmd dotnet api-user.dll`: executa a API com o bootstrap necessario para a auto-instrumentacao
 
-Neste projeto, o bootstrap foi encapsulado em [run-otel-auto.ps1](/d:/Rafael/Documents/granto/api-user/scripts/run-otel-auto.ps1) para padronizar a execucao e evitar configurar essas variaveis manualmente toda vez.
+Neste projeto, o bootstrap foi encapsulado em [run-otel-auto.ps1](scripts/run-otel-auto.ps1) para padronizar a execucao e evitar configurar essas variaveis manualmente toda vez.
 
 ### Diagrama de inicializacao
 
